@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Football Penalty Shootout</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #121b3a 0%, #1f315f 55%, #96c24e 100%);
+      color: #fff;
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-card {
+      width: min(760px, 95%);
+      background: rgba(0, 0, 0, 0.45);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    }
+    h1 {
+      margin: 0 0 16px;
+      font-size: clamp(2rem, 2.8vw, 3rem);
+      text-align: center;
+    }
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+    .panel {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+    .panel strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      color: #d9e8ff;
+    }
+    .panel span {
+      font-size: 2.2rem;
+      color: #ffeb3b;
+    }
+    .pitch {
+      background: linear-gradient(180deg, #2d5a1e 0%, #16360e 100%);
+      border: 2px solid #fff;
+      border-radius: 22px;
+      padding: 18px;
+      margin-bottom: 20px;
+      position: relative;
+      min-height: 300px;
+    }
+    .goal {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 240px;
+      height: 110px;
+      border: 4px solid #fff;
+      border-top: none;
+      border-radius: 0 0 22px 22px;
+      background: rgba(255,255,255,0.08);
+      box-shadow: inset 0 0 0 3px rgba(255,255,255,0.12);
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+    .goal.scored {
+      transform: translateX(-50%) translateY(-8px) scale(1.03);
+      box-shadow: 0 0 30px rgba(255,255,59,0.45);
+      background: rgba(255,255,255,0.15);
+    }
+    .goal.saved {
+      transform: translateX(-50%) translateY(-8px) scale(0.98);
+      box-shadow: 0 0 20px rgba(18, 210, 255, 0.45);
+      background: rgba(18, 210, 255, 0.12);
+    }
+    .keeper {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      width: 112px;
+      height: 112px;
+      transform: translateX(-50%);
+      transition: transform 0.35s ease;
+      z-index: 1;
+    }
+    .keeper-head {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #f4d2b0;
+      border: 2px solid #fff;
+      transform: translateX(-50%);
+    }
+    .keeper-torso {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      width: 38px;
+      height: 50px;
+      border-radius: 14px;
+      background: #1a5c8d;
+      transform: translateX(-50%);
+    }
+    .keeper-arm {
+      position: absolute;
+      top: 24px;
+      width: 14px;
+      height: 42px;
+      background: #1a5c8d;
+      border-radius: 10px;
+      transform-origin: top center;
+    }
+    .keeper-arm-left {
+      left: 6px;
+      transform: rotate(-28deg);
+    }
+    .keeper-arm-right {
+      right: 6px;
+      transform: rotate(28deg);
+    }
+    .keeper.dive-left {
+      transform: translate(-190%, 24px) rotate(-26deg);
+    }
+    .keeper.dive-right {
+      transform: translate(18%, 24px) rotate(26deg);
+    }
+    .keeper.dive-center {
+      transform: translate(-50%, 10px) rotate(0deg);
+    }
+    .player {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      width: 34px;
+      height: 68px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .player::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #f4d2b0;
+      transform: translateX(-50%);
+    }
+    .player::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 26px;
+      height: 44px;
+      border-radius: 18px;
+      background: #e02a2a;
+      transform: translateX(-50%);
+    }
+    .ball {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 0 10px rgba(255,255,255,0.15);
+      transform: translateX(-50%) translateY(0);
+      transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 2;
+    }
+    .ball.shot-left {
+      transform: translateX(-170px) translateY(-182px);
+    }
+    .ball.shot-center {
+      transform: translateX(-50%) translateY(-212px);
+    }
+    .ball.shot-right {
+      transform: translateX(92px) translateY(-182px);
+    }
+    .ball.miss-left {
+      transform: translateX(-220px) translateY(-130px) rotate(-20deg);
+    }
+    .ball.miss-center {
+      transform: translateX(-50%) translateY(-250px) rotate(-6deg);
+    }
+    .ball.miss-right {
+      transform: translateX(120px) translateY(-130px) rotate(20deg);
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    button {
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(145deg, #3b6a2f, #25531c);
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 14px 18px;
+      transition: transform 0.15s ease, background 0.15s ease;
+      min-height: 52px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(145deg, #4b7f3b, #386228);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .message {
+      min-height: 42px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: rgba(0,0,0,0.25);
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: background 0.25s ease, color 0.25s ease;
+    }
+    .message.goal {
+      background: rgba(255,255,59,0.12);
+      color: #fff;
+    }
+    .message.save {
+      background: rgba(18, 210, 255, 0.14);
+      color: #fff;
+    }
+    .footer {
+      margin-top: 18px;
+      text-align: center;
+      color: rgba(255,255,255,0.7);
+      font-size: 0.92rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-card">
+    <h1>Football Penalty Shootout</h1>
+    <div class="scoreboard">
+      <div class="panel">
+        <strong>Player score</strong>
+        <span id="playerScore">0</span>
+      </div>
+      <div class="panel">
+        <strong>Goalkeeper saves</strong>
+        <span id="keeperScore">0</span>
+      </div>
+    </div>
+    <div class="pitch">
+      <div class="goal" id="goal">
+        <div class="keeper" id="keeper">
+          <div class="keeper-head"></div>
+          <div class="keeper-torso"></div>
+          <div class="keeper-arm keeper-arm-left"></div>
+          <div class="keeper-arm keeper-arm-right"></div>
+        </div>
+      </div>
+      <div class="ball" id="ball"></div>
+      <div class="player" id="shooter"></div>
+    </div>
+    <div class="controls">
+      <button data-direction="left">Shoot Left</button>
+      <button data-direction="center">Shoot Center</button>
+      <button data-direction="right">Shoot Right</button>
+    </div>
+    <div class="message" id="message">Choose a direction and take your shot!</div>
+    <div class="footer">First to 5 successful goals wins. If the keeper saves 5, you lose.</div>
+  </div>
+
+  <script>
+    const playerScoreEl = document.getElementById('playerScore');
+    const keeperScoreEl = document.getElementById('keeperScore');
+    const messageEl = document.getElementById('message');
+    const buttons = document.querySelectorAll('button[data-direction]');
+    const goalEl = document.getElementById('goal');
+    const keeperEl = document.getElementById('keeper');
+    const ballEl = document.getElementById('ball');
+
+    let playerScore = 0;
+    let keeperScore = 0;
+    const winTarget = 5;
+    let audioCtx;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      initAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'kick') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(740, now + 0.18);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.22, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      } else if (type === 'goal') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(520, now + 0.22);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      } else if (type === 'save') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.linearRampToValueAtTime(260, now + 0.16);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.14, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      } else if (type === 'miss') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.linearRampToValueAtTime(220, now + 0.16);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      }
+
+      osc.start(now);
+      osc.stop(now + 0.45);
+    }
+
+    function getKeeperMove() {
+      const choices = ['left', 'center', 'right'];
+      return choices[Math.floor(Math.random() * choices.length)];
+    }
+
+    function updateScoreboard() {
+      playerScoreEl.textContent = playerScore;
+      keeperScoreEl.textContent = keeperScore;
+    }
+
+    function resetBall() {
+      ballEl.classList.remove('shot-left', 'shot-center', 'shot-right', 'miss-left', 'miss-center', 'miss-right');
+    }
+
+    function resetKeeper() {
+      keeperEl.classList.remove('dive-left', 'dive-right', 'dive-center');
+    }
+
+    function animateShot(direction, result, keeperGuess) {
+      resetBall();
+      resetKeeper();
+      void ballEl.offsetWidth;
+      if (result === 'miss') {
+        ballEl.classList.add(`miss-${direction}`);
+      } else {
+        ballEl.classList.add(`shot-${direction}`);
+      }
+      keeperEl.classList.add(`dive-${keeperGuess}`);
+      goalEl.classList.remove('scored', 'saved');
+      if (result === 'goal') {
+        goalEl.classList.add('scored');
+        messageEl.classList.add('goal');
+        messageEl.classList.remove('save');
+      } else if (result === 'save') {
+        goalEl.classList.add('saved');
+        messageEl.classList.add('save');
+        messageEl.classList.remove('goal');
+      } else {
+        messageEl.classList.remove('goal', 'save');
+      }
+      setTimeout(() => {
+        resetBall();
+        resetKeeper();
+      }, 900);
+    }
+
+    function endGame(finalMessage) {
+      messageEl.textContent = finalMessage;
+      messageEl.classList.remove('goal', 'save');
+      buttons.forEach(button => button.disabled = true);
+      const restartButton = document.createElement('button');
+      restartButton.textContent = 'Play Again';
+      restartButton.style.gridColumn = '1 / -1';
+      restartButton.addEventListener('click', () => location.reload());
+      document.querySelector('.controls').appendChild(restartButton);
+    }
+
+    function shoot(direction) {
+      const keeperGuess = getKeeperMove();
+      const accuracy = Math.random();
+      const missesShot = accuracy < 0.12;
+      const keeperReacted = keeperGuess === direction;
+      const saved = !missesShot && keeperReacted && Math.random() < 0.72;
+      const result = missesShot ? 'miss' : (saved ? 'save' : 'goal');
+
+      if (result === 'miss') {
+        messageEl.textContent = `Your shot missed the target while keeper dove ${keeperGuess}.`;
+        playSound('kick');
+        playSound('miss');
+      } else if (result === 'save') {
+        keeperScore += 1;
+        messageEl.textContent = `Saved! Keeper guessed ${keeperGuess} and stopped your shot.`;
+        playSound('kick');
+        setTimeout(() => playSound('save'), 120);
+      } else {
+        playerScore += 1;
+        const missPhrase = keeperReacted ? 'but your power was too strong!' : 'and it hit the corner.';
+        messageEl.textContent = `Goal! Keeper dove ${keeperGuess}, ${missPhrase}`;
+        playSound('kick');
+        setTimeout(() => playSound('goal'), 130);
+      }
+
+      animateShot(direction, result, keeperGuess);
+      updateScoreboard();
+
+      if (playerScore >= winTarget) {
+        setTimeout(() => endGame('You win the shootout! Congratulations!'), 900);
+      } else if (keeperScore >= winTarget) {
+        setTimeout(() => endGame('The keeper wins this time. Try again!'), 900);
+      }
+    }
+
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        const direction = button.getAttribute('data-direction');
+        shoot(direction);
+      });
+    });
+  </script>
+</body>
+</html>
